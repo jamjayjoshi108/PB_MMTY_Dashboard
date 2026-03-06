@@ -52,9 +52,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# -----------------------------------------------------------------------------
-# 2. DATA CONNECTION & FETCHING
-# -----------------------------------------------------------------------------
+
 # -----------------------------------------------------------------------------
 # 2. DATA CONNECTION & FETCHING (Public Sheet Method)
 # -----------------------------------------------------------------------------
@@ -63,10 +61,10 @@ st.markdown("""
 @st.cache_data(ttl=10) 
 def load_data():
     # Replace with your actual Google Sheet ID
-    SHEET_ID = "YOUR_EXACT_SHEET_ID_HERE"
+    SHEET_ID = "1ejxAeYp0RFiXGq07A2VJbasOatfNCB_y3PTY5v4ct0g"
     
     # Create the public export URL
-    csv_url = f"https://docs.google.com/spreadsheets/d/1ejxAeYp0RFiXGq07A2VJbasOatfNCB_y3PTY5v4ct0g/export?format=csv&gid=0"
+    csv_url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
     
     # Read directly using Pandas (No st.connection or secrets required!)
     df = pd.read_csv(csv_url)
