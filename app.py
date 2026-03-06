@@ -54,7 +54,7 @@ def load_data():
     SHEET_ID = "YOUR_EXACT_SHEET_ID_HERE"
     
     # Create the public export URL
-    csv_url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
+    csv_url = f"https://docs.google.com/spreadsheets/d/1ejxAeYp0RFiXGq07A2VJbasOatfNCB_y3PTY5v4ct0g/export?format=csv&gid=0"
     
     # Read directly using Pandas (No st.connection or secrets required!)
     df = pd.read_csv(csv_url)
