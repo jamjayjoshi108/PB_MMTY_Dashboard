@@ -10,7 +10,10 @@ st.set_page_config(page_title="Mukhyamantri Tirath Yatra Dashboard", page_icon="
 # Custom CSS for minute footer and cleaner metric cards
 st.markdown("""
     <style>
-    /* Metric Card Styling */
+    /* 1. Hide the default Streamlit footer */
+    footer {visibility: hidden;}
+    
+    /* 2. Metric Card Styling */
     div[data-testid="metric-container"] {
         background-color: #f8f9fa;
         border: 1px solid #e0e0e0;
@@ -19,7 +22,6 @@ st.markdown("""
         box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
     }
     
-    /* Dark mode adjustments for metrics */
     @media (prefers-color-scheme: dark) {
         div[data-testid="metric-container"] {
             background-color: #1e1e1e;
@@ -27,13 +29,24 @@ st.markdown("""
         }
     }
 
-    /* Minute Footer Styling */
+    /* 3. The Minute Footer - Pinned to absolute bottom */
     .minute-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
         text-align: center;
         font-size: 10px;
         color: #888888;
-        padding-top: 50px;
-        padding-bottom: 10px;
+        background-color: #ffffff; /* Matches Streamlit light mode */
+        padding: 10px 0px;
+        z-index: 999; /* Ensures it stays on top of other elements */
+    }
+    
+    @media (prefers-color-scheme: dark) {
+        .minute-footer {
+            background-color: #0e1117; /* Matches Streamlit dark mode */
+        }
     }
     </style>
 """, unsafe_allow_html=True)
