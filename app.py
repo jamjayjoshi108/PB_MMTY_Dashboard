@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from streamlit_gsheets import GSheetsConnection
 
 # -----------------------------------------------------------------------------
 # 1. PAGE CONFIGURATION & CUSTOM CSS (State-of-the-art look)
