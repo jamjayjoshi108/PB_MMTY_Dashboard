@@ -87,7 +87,7 @@ except Exception as e:
 # -----------------------------------------------------------------------------
 # 3. SIDEBAR FILTERS
 # -----------------------------------------------------------------------------
-st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Aam_Aadmi_Party_logo_%28English%29.svg/1200px-Aam_Aadmi_Party_logo_%28English%29.svg.png", width=150)
+st.sidebar.image("Aam_Aadmi_Party_logo_(English).svg.png", width=150)
 st.sidebar.header("Filter Data")
 
 # Date Filter
