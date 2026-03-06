@@ -217,4 +217,4 @@ else:
 # -----------------------------------------------------------------------------
 # 7. THE MINUTE FOOTER
 # -----------------------------------------------------------------------------
-st.markdown('<div class="minute-footer">made with ❤️ by Jay Joshi</div>', unsafe_allow_html=True)
+st.markdown('<div class="minute-footer">Made with ❤️ by Jay Joshi</div>', unsafe_allow_html=True)
