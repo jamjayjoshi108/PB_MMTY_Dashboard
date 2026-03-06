@@ -43,14 +43,23 @@ st.markdown("""
 # -----------------------------------------------------------------------------
 # 2. DATA CONNECTION & FETCHING
 # -----------------------------------------------------------------------------
-@st.cache_data(ttl=600) # Caches data for 10 mins so the app is lightning fast
+# -----------------------------------------------------------------------------
+# 2. DATA CONNECTION & FETCHING (Public Sheet Method)
+# -----------------------------------------------------------------------------
+# ttl=10 acts as your trigger: Streamlit will automatically fetch fresh data 
+# from the Google Sheet every 10 seconds, making it essentially real-time!
+@st.cache_data(ttl=10) 
 def load_data():
-    # Connect to Google Sheets
-    conn = st.connection("gsheets", type=GSheetsConnection)
-    # Read the sheet (Assumes your data is in the first tab)
-    df = conn.read(worksheet="Sheet1")
+    # Replace with your actual Google Sheet ID
+    SHEET_ID = "YOUR_EXACT_SHEET_ID_HERE"
     
-    # Drop rows where 'Date' or 'Yatri Name' is completely empty
+    # Create the public export URL
+    csv_url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
+    
+    # Read directly using Pandas (No st.connection or secrets required!)
+    df = pd.read_csv(csv_url)
+    
+    # Clean up empty rows
     df = df.dropna(subset=['Date', 'Yatri Name'], how='all')
     
     # Convert Date column to datetime format
