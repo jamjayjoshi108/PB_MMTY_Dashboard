@@ -10,7 +10,7 @@ st.set_page_config(page_title="Mukhyamantri Tirath Yatra Dashboard", page_icon="
 # AAP Color Palette: Navy Blue (#0066A4) and Broom Yellow (#F2B200)
 st.markdown("""
     <style>
-    /* 1. NUKE THE USELESS TOP SPACE */
+    /* Nuke the useless top space */
     .block-container {
         padding-top: 1rem !important;
         padding-bottom: 0rem !important;
@@ -18,38 +18,6 @@ st.markdown("""
     }
     
     footer {visibility: hidden;}
-    
-    /* 2. EYE-CATCHING FANCY KPI CARDS */
-    div[data-testid="metric-container"] {
-        background: linear-gradient(135deg, #0066A4 0%, #00426a 100%); /* Deep AAP Blue Gradient */
-        padding: 15px 20px;
-        border-radius: 12px;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.15);
-        border: none;
-        border-bottom: 5px solid #F2B200; /* Thick AAP Yellow Bottom Accent */
-        text-align: center;
-    }
-    
-    /* Make the KPI Title (Label) AAP Yellow */
-    div[data-testid="stMetricLabel"] > div > div > p {
-        color: #F2B200 !important;
-        font-size: 1.1rem !important;
-        font-weight: bold !important;
-    }
-    
-    /* Make the KPI Numbers White to pop against the blue background */
-    div[data-testid="stMetricValue"] {
-        color: #FFFFFF !important;
-        font-size: 2rem !important;
-        font-weight: 800 !important;
-    }
-    
-    @media (prefers-color-scheme: dark) {
-        div[data-testid="metric-container"] {
-            background: linear-gradient(135deg, #1e1e1e 0%, #121212 100%);
-            border-bottom: 5px solid #F2B200; 
-        }
-    }
     
     .minute-footer {
         position: fixed;
@@ -161,75 +129,89 @@ if selected_lgd != "All":
     filtered_df = filtered_df[filtered_df['LGD_Village'] == selected_lgd]
 
 # -----------------------------------------------------------------------------
-# 4. DASHBOARD HEADER & KPIs
+# 4. DASHBOARD HEADER & BULLETPROOF KPIs
 # -----------------------------------------------------------------------------
-st.title("🚌 Mukhyamantri Tirath Yatra") # Subheading removed entirely
+st.title("🚌 Mukhyamantri Tirath Yatra")
 
 total_yatras = len(filtered_df) 
-total_yatris = len(filtered_df) 
 districts_covered = filtered_df['District'].nunique()
 halkas_covered = filtered_df['Halka'].nunique()
 avg_age = filtered_df['Age'].mean()
 
-kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
-kpi1.metric(label="Total Yatras", value=f"{total_yatras:,}")
-kpi2.metric(label="Total Yatris", value=f"{total_yatris:,}")
-kpi3.metric(label="Districts Covered", value=districts_covered)
-kpi4.metric(label="Halkas Covered", value=halkas_covered)
-kpi5.metric(label="Average Age", value=f"{avg_age:.1f} yrs" if pd.notna(avg_age) else "0 yrs")
+# Pure HTML/CSS function to guarantee KPIs render perfectly and look amazing
+def create_kpi_card(title, value):
+    return f"""
+    <div style="background: linear-gradient(135deg, #0066A4 0%, #002244 100%); 
+                padding: 20px 10px; border-radius: 10px; border-bottom: 5px solid #F2B200;
+                box-shadow: 0px 4px 10px rgba(0,0,0,0.1); text-align: center; margin-bottom: 15px;">
+        <p style="color: #F2B200; font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">{title}</p>
+        <h2 style="color: #FFFFFF; font-size: 2.5rem; font-weight: 800; margin: 0;">{value}</h2>
+    </div>
+    """
+
+kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+kpi1.markdown(create_kpi_card("Total Yatras", f"{total_yatras:,}"), unsafe_allow_html=True)
+kpi2.markdown(create_kpi_card("Districts Covered", f"{districts_covered:,}"), unsafe_allow_html=True)
+kpi3.markdown(create_kpi_card("Halkas Covered", f"{halkas_covered:,}"), unsafe_allow_html=True)
+kpi4.markdown(create_kpi_card("Average Age", f"{avg_age:.1f} yrs" if pd.notna(avg_age) else "0 yrs"), unsafe_allow_html=True)
 
 st.markdown("---")
 
 # -----------------------------------------------------------------------------
-# 5. VISUALIZATIONS (4-IN-A-ROW)
+# 5. VISUALIZATIONS (DIFFERENTIATED WITH BORDERS)
 # -----------------------------------------------------------------------------
-if total_yatris > 0:
-    # All 4 charts squeezed perfectly into a single row
+if total_yatras > 0:
     col1, col2, col3, col4 = st.columns(4)
 
+    # 1. Gender Pie Chart
     with col1:
-        st.markdown("**Gender Distribution**")
-        gender_counts = filtered_df['Gender'].value_counts().reset_index()
-        gender_counts.columns = ['Gender', 'Count']
-        fig_gender = px.pie(gender_counts, values='Count', names='Gender', hole=0.4,
-                            color_discrete_sequence=['#0066A4', '#F2B200'])
-        # Push legend to the bottom to save horizontal space
-        fig_gender.update_layout(margin=dict(t=0, b=0, l=0, r=0), showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5))
-        st.plotly_chart(fig_gender, use_container_width=True)
+        with st.container(border=True): # Adds a distinct box around the chart
+            st.markdown("👥 **Gender Distribution**")
+            gender_counts = filtered_df['Gender'].value_counts().reset_index()
+            gender_counts.columns = ['Gender', 'Count']
+            fig_gender = px.pie(gender_counts, values='Count', names='Gender', hole=0.4,
+                                color_discrete_sequence=['#0066A4', '#F2B200'])
+            fig_gender.update_layout(margin=dict(t=10, b=10, l=10, r=10), showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5))
+            st.plotly_chart(fig_gender, use_container_width=True)
 
+    # 2. Yatras Line Chart
     with col2:
-        st.markdown("**Yatras Over Time**")
-        daily_yatras = filtered_df.groupby('Date').size().reset_index(name='Yatras')
-        fig_trend_yatras = px.line(daily_yatras, x='Date', y='Yatras', markers=True,
-                                   line_shape='spline', color_discrete_sequence=['#F2B200'])
-        fig_trend_yatras.update_traces(marker=dict(color='#0066A4', size=6))
-        # Strip axis titles to save space in the 4-column layout
-        fig_trend_yatras.update_layout(margin=dict(t=0, b=0, l=0, r=0), xaxis_title=None, yaxis_title=None)
-        st.plotly_chart(fig_trend_yatras, use_container_width=True)
+        with st.container(border=True):
+            st.markdown("📈 **Yatras Over Time**")
+            daily_yatras = filtered_df.groupby('Date').size().reset_index(name='Yatras')
+            fig_trend_yatras = px.line(daily_yatras, x='Date', y='Yatras', markers=True,
+                                       line_shape='spline', color_discrete_sequence=['#F2B200'])
+            fig_trend_yatras.update_traces(marker=dict(color='#0066A4', size=6))
+            fig_trend_yatras.update_layout(margin=dict(t=10, b=10, l=10, r=10), xaxis_title=None, yaxis_title=None)
+            st.plotly_chart(fig_trend_yatras, use_container_width=True)
 
+    # 3. Turnout Bar Chart
     with col3:
-        st.markdown("**Turnout by District**")
-        dist_counts = filtered_df['District'].value_counts().reset_index()
-        dist_counts.columns = ['District', 'Turnout']
-        fig_dist = px.bar(dist_counts, x='District', y='Turnout')
-        fig_dist.update_traces(marker_color='#0066A4')
-        fig_dist.update_layout(margin=dict(t=0, b=0, l=0, r=0), xaxis_title=None, yaxis_title=None)
-        st.plotly_chart(fig_dist, use_container_width=True)
+        with st.container(border=True):
+            st.markdown("📍 **Turnout by District**")
+            dist_counts = filtered_df['District'].value_counts().reset_index()
+            dist_counts.columns = ['District', 'Turnout']
+            fig_dist = px.bar(dist_counts, x='District', y='Turnout')
+            fig_dist.update_traces(marker_color='#0066A4')
+            fig_dist.update_layout(margin=dict(t=10, b=10, l=10, r=10), xaxis_title=None, yaxis_title=None)
+            st.plotly_chart(fig_dist, use_container_width=True)
 
+    # 4. Yatris Line Chart
     with col4:
-        st.markdown("**Yatris Over Time**")
-        daily_yatris = filtered_df.groupby('Date').size().reset_index(name='Yatris')
-        fig_trend_yatris = px.line(daily_yatris, x='Date', y='Yatris', markers=True,
-                                   line_shape='spline', color_discrete_sequence=['#0066A4']) 
-        fig_trend_yatris.update_traces(marker=dict(color='#F2B200', size=6)) 
-        fig_trend_yatris.update_layout(margin=dict(t=0, b=0, l=0, r=0), xaxis_title=None, yaxis_title=None)
-        st.plotly_chart(fig_trend_yatris, use_container_width=True)
+        with st.container(border=True):
+            st.markdown("👤 **Yatris Over Time**")
+            daily_yatris = filtered_df.groupby('Date').size().reset_index(name='Yatris')
+            fig_trend_yatris = px.line(daily_yatris, x='Date', y='Yatris', markers=True,
+                                       line_shape='spline', color_discrete_sequence=['#0066A4']) 
+            fig_trend_yatris.update_traces(marker=dict(color='#F2B200', size=6)) 
+            fig_trend_yatris.update_layout(margin=dict(t=10, b=10, l=10, r=10), xaxis_title=None, yaxis_title=None)
+            st.plotly_chart(fig_trend_yatris, use_container_width=True)
 
     # -------------------------------------------------------------------------
     # 6. RAW DATA TABLE
     # -------------------------------------------------------------------------
     st.markdown("---")
-    st.markdown("**Raw Yatri Manifest**")
+    st.markdown("📝 **Raw Yatri Manifest**")
     display_df = filtered_df.copy()
     display_df['Date'] = display_df['Date'].dt.strftime('%d/%m/%Y')
     
@@ -245,7 +227,6 @@ else:
 # 7. FOOTER
 # -----------------------------------------------------------------------------
 st.markdown('<div class="minute-footer">made with ❤️ by Jay Joshi</div>', unsafe_allow_html=True)
-
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 
