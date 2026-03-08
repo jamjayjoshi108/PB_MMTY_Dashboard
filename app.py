@@ -218,7 +218,7 @@ if total_yatris_served > 0:
     display_df = filtered_df.copy()
     display_df['Date'] = display_df['Date'].dt.strftime('%d/%m/%Y')
     
-    cols = ['Vendor', 'Date', 'District', 'Halka', 'Block Name', 'LGD_Village', 'Booth No.', 'Guide Name', 'Guide Contact No.', 'Yatri Name', 'Gender', 'Age', 'Yatri Contact No.', 'Voter ID No.']
+    cols = ['Vendor', 'Date', 'District', 'Halka', 'LGD_Village', 'Booth No.', 'Guide Name', 'Guide Contact No.', 'Yatri Name', 'Gender', 'Age', 'Yatri Contact No.', 'Voter ID No.']
     display_df = display_df[[c for c in cols if c in display_df.columns]]
     
     st.dataframe(display_df, use_container_width=True, hide_index=True)
