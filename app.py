@@ -153,8 +153,7 @@ if selected_lgd != "All":
 # -----------------------------------------------------------------------------
 # 4. DASHBOARD HEADER & KPIs
 # -----------------------------------------------------------------------------
-st.title("🚌 Mukhyamantri Tirath Yatra Operations")
-st.markdown("Live tracking and demographic breakdown of the Yatra initiative across Punjab.")
+st.title("🚌 Mukhyamantri Tirath Yatra")
 
 total_yatras = len(filtered_df) 
 total_yatris = len(filtered_df) 
