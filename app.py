@@ -7,7 +7,7 @@ import plotly.express as px
 # -----------------------------------------------------------------------------
 st.set_page_config(page_title="Mukhyamantri Tirath Yatra Dashboard", page_icon="🚌", layout="wide", initial_sidebar_state="expanded")
 
-# AAP Color Palette: Blue (#0066A4) and Yellow (#F2B200)
+# AAP Color Palette: Navy Blue (#0066A4) and Broom Yellow (#F2B200)
 st.markdown("""
     <style>
     footer {visibility: hidden;}
@@ -21,11 +21,20 @@ st.markdown("""
         border-radius: 10px;
         box-shadow: 2px 2px 8px rgba(0,0,0,0.05);
     }
+    
+    /* Make the metric numbers AAP Blue */
+    div[data-testid="stMetricValue"] {
+        color: #0066A4 !important;
+    }
+    
     @media (prefers-color-scheme: dark) {
         div[data-testid="metric-container"] {
             background-color: #1e1e1e;
             border: 1px solid #333;
-            border-top: 4px solid #F2B200; /* AAP Yellow Accent for Dark Mode */
+            border-top: 4px solid #F2B200; /* AAP Yellow for Dark Mode */
+        }
+        div[data-testid="stMetricValue"] {
+            color: #F2B200 !important; /* Yellow text for Dark Mode */
         }
     }
     
@@ -52,7 +61,6 @@ st.markdown("""
 # -----------------------------------------------------------------------------
 @st.cache_data(ttl=10) # Refreshes every 10 seconds
 def load_data():
-    # Your 3 Live Google Sheet IDs
     VENDOR_SHEETS = {
         "EaseMyTrip": "1ejxAeYp0RFiXGq07A2VJbasOatfNCB_y3PTY5v4ct0g",
         "MachConferences": "1gBabD_as3WvaSq4JUX_Si5dJBGxQNTuxY3_ILDEVbEs",
@@ -107,33 +115,28 @@ if data.empty:
     st.warning("Awaiting data from vendors...")
     st.stop()
 
-# Date Filter
 min_date, max_date = data['Date'].min(), data['Date'].max()
 if pd.notna(min_date) and pd.notna(max_date):
     start_date, end_date = st.sidebar.date_input("Select Date Range", value=[min_date, max_date], min_value=min_date, max_value=max_date)
 else:
     start_date, end_date = None, None
 
-# Vendor Filter
 vendors = ["All"] + list(data['Vendor'].dropna().unique())
 selected_vendor = st.sidebar.selectbox("Select Vendor Agency", vendors)
 
-# District Filter
 districts = ["All"] + list(data['District'].dropna().unique())
 selected_district = st.sidebar.selectbox("Select District", districts)
 
-# Halka Filter
 if selected_district != "All":
     halkas = ["All"] + list(data[data['District'] == selected_district]['Halka'].dropna().unique())
 else:
     halkas = ["All"] + list(data['Halka'].dropna().unique())
 selected_halka = st.sidebar.selectbox("Select Halka", halkas)
 
-# LGD Code - Village Filter
 lgd_options = ["All"] + sorted([str(x) for x in data['LGD_Village'].dropna().unique()])
 selected_lgd = st.sidebar.selectbox("Select LGD Code - Village", lgd_options)
 
-# Apply All Filters
+# Apply Filters
 filtered_df = data.copy()
 
 if start_date and end_date:
@@ -169,44 +172,53 @@ kpi5.metric(label="Average Age", value=f"{avg_age:.1f} yrs" if pd.notna(avg_age)
 st.markdown("---")
 
 # -----------------------------------------------------------------------------
-# 5. VISUALIZATIONS (AAP Branded)
+# 5. VISUALIZATIONS (Strictly AAP Branded)
 # -----------------------------------------------------------------------------
 if total_yatris > 0:
+    # ROW 1: Gender and Yatras Over Time
     col1, col2 = st.columns(2)
 
     with col1:
         st.subheader("Gender Distribution")
         gender_counts = filtered_df['Gender'].value_counts().reset_index()
         gender_counts.columns = ['Gender', 'Count']
-        # AAP Colors: Blue and Yellow
         fig_gender = px.pie(gender_counts, values='Count', names='Gender', hole=0.4,
-                            color_discrete_sequence=['#0066A4', '#F2B200'])
+                            color_discrete_sequence=['#0066A4', '#F2B200']) # AAP Blue & Yellow
         fig_gender.update_layout(margin=dict(t=0, b=0, l=0, r=0))
         st.plotly_chart(fig_gender, use_container_width=True)
 
     with col2:
         st.subheader("Yatras Over Time")
-        daily_counts = filtered_df.groupby('Date').size().reset_index(name='Yatras')
-        # AAP Yellow trendline
-        fig_trend = px.line(daily_counts, x='Date', y='Yatras', markers=True,
-                            line_shape='spline', color_discrete_sequence=['#F2B200'])
-        # AAP Blue markers
-        fig_trend.update_traces(marker=dict(color='#0066A4', size=8))
-        fig_trend.update_layout(margin=dict(t=0, b=0, l=0, r=0))
-        st.plotly_chart(fig_trend, use_container_width=True)
+        daily_yatras = filtered_df.groupby('Date').size().reset_index(name='Yatras')
+        fig_trend_yatras = px.line(daily_yatras, x='Date', y='Yatras', markers=True,
+                                   line_shape='spline', color_discrete_sequence=['#F2B200']) # AAP Yellow Line
+        fig_trend_yatras.update_traces(marker=dict(color='#0066A4', size=8)) # AAP Blue Dots
+        fig_trend_yatras.update_layout(margin=dict(t=0, b=0, l=0, r=0))
+        st.plotly_chart(fig_trend_yatras, use_container_width=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     
-    st.subheader("Turnout by District")
-    dist_counts = filtered_df['District'].value_counts().reset_index()
-    dist_counts.columns = ['District', 'Yatras']
+    # ROW 2: Turnout by District and Yatris Over Time
+    col3, col4 = st.columns(2)
     
-    # AAP Blue color scale gradient
-    fig_dist = px.bar(dist_counts, x='District', y='Yatras', text='Yatras',
-                      color='Yatras', color_continuous_scale=['#99C2E0', '#0066A4'])
-    fig_dist.update_traces(textposition='outside')
-    fig_dist.update_layout(margin=dict(t=0, b=0, l=0, r=0), coloraxis_showscale=False)
-    st.plotly_chart(fig_dist, use_container_width=True)
+    with col3:
+        st.subheader("Turnout by District")
+        dist_counts = filtered_df['District'].value_counts().reset_index()
+        dist_counts.columns = ['District', 'Turnout']
+        fig_dist = px.bar(dist_counts, x='District', y='Turnout', text='Turnout')
+        fig_dist.update_traces(marker_color='#0066A4', textposition='outside') # STRICT AAP Blue
+        fig_dist.update_layout(margin=dict(t=0, b=0, l=0, r=0))
+        st.plotly_chart(fig_dist, use_container_width=True)
+
+    with col4:
+        st.subheader("Yatris Over Time")
+        daily_yatris = filtered_df.groupby('Date').size().reset_index(name='Yatris')
+        fig_trend_yatris = px.line(daily_yatris, x='Date', y='Yatris', markers=True,
+                                   line_shape='spline', color_discrete_sequence=['#0066A4']) # AAP Blue Line
+        fig_trend_yatris.update_traces(marker=dict(color='#F2B200', size=8)) # AAP Yellow Dots
+        fig_trend_yatris.update_layout(margin=dict(t=0, b=0, l=0, r=0))
+        st.plotly_chart(fig_trend_yatris, use_container_width=True)
+
 
     # -------------------------------------------------------------------------
     # 6. RAW DATA TABLE
