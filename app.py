@@ -48,9 +48,9 @@ st.markdown("""
 def load_data():
     # 👉 PASTE YOUR 3 EXACT GOOGLE SHEET IDs HERE 👈
     VENDOR_SHEETS = {
-        "EaseMyTrip": "PASTE_EASEMYTRIP_SHEET_ID_HERE",
-        "MachConferences": "PASTE_MACH_SHEET_ID_HERE",
-        "Zenith": "PASTE_ZENITH_SHEET_ID_HERE"
+        "EaseMyTrip": "1ejxAeYp0RFiXGq07A2VJbasOatfNCB_y3PTY5v4ct0g",
+        "MachConferences": "1gBabD_as3WvaSq4JUX_Si5dJBGxQNTuxY3_ILDEVbEs",
+        "Zenith": "1gQwS1Uy4RuBpAL4kO39LqmxxIAHKDv_N3Wz7bULARgg"
     }
     
     all_dataframes = []
