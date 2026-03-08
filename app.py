@@ -51,7 +51,7 @@ def load_data():
         "EaseMyTrip": "1ejxAeYp0RFiXGq07A2VJbasOatfNCB_y3PTY5v4ct0g",
         "MachConferences": "1gBabD_as3WvaSq4JUX_Si5dJBGxQNTuxY3_ILDEVbEs",
         "Zenith": "1gQwS1Uy4RuBpAL4kO39LqmxxIAHKDv_N3Wz7bULARgg"
-    
+    }
     all_dataframes = []
     
     for vendor_name, sheet_id in VENDOR_SHEETS.items():
