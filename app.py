@@ -169,10 +169,11 @@ kpi5.markdown(create_kpi_card("Average Age", f"{avg_age:.1f} yrs" if pd.notna(av
 st.markdown("---")
 
 # -----------------------------------------------------------------------------
-# 5. VISUALIZATIONS (DIFFERENTIATED WITH BORDERS)
+# 5. VISUALIZATIONS (SPACIOUS 2x2 GRID)
 # -----------------------------------------------------------------------------
 if total_yatris_served > 0:
-    col1, col2, col3, col4 = st.columns(4)
+    # --- ROW 1 ---
+    col1, col2 = st.columns(2)
 
     # 1. Gender Pie Chart
     with col1:
@@ -182,7 +183,7 @@ if total_yatris_served > 0:
             gender_counts.columns = ['Gender', 'Count']
             fig_gender = px.pie(gender_counts, values='Count', names='Gender', hole=0.4,
                                 color_discrete_sequence=['#0066A4', '#F2B200'])
-            fig_gender.update_layout(margin=dict(t=10, b=10, l=10, r=10), showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5))
+            fig_gender.update_layout(margin=dict(t=20, b=20, l=10, r=10), showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5))
             st.plotly_chart(fig_gender, use_container_width=True)
 
     # 2. Yatras Line Chart
@@ -192,10 +193,16 @@ if total_yatris_served > 0:
             daily_yatras = filtered_df.groupby('Date').size().reset_index(name='Yatras')
             fig_trend_yatras = px.line(daily_yatras, x='Date', y='Yatras', markers=True,
                                        line_shape='spline', color_discrete_sequence=['#F2B200'])
-            fig_trend_yatras.update_traces(marker=dict(color='#0066A4', size=6))
-            fig_trend_yatras.update_layout(margin=dict(t=10, b=10, l=10, r=10), xaxis_title=None, yaxis_title=None)
+            fig_trend_yatras.update_traces(marker=dict(color='#0066A4', size=8))
+            fig_trend_yatras.update_layout(margin=dict(t=20, b=20, l=10, r=10), xaxis_title=None, yaxis_title=None)
             st.plotly_chart(fig_trend_yatras, use_container_width=True)
 
+    # Add a little breathing room between the rows
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # --- ROW 2 ---
+    col3, col4 = st.columns(2)
+    
     # 3. Turnout Bar Chart
     with col3:
         with st.container(border=True):
@@ -204,7 +211,7 @@ if total_yatris_served > 0:
             dist_counts.columns = ['District', 'Turnout']
             fig_dist = px.bar(dist_counts, x='District', y='Turnout')
             fig_dist.update_traces(marker_color='#0066A4')
-            fig_dist.update_layout(margin=dict(t=10, b=10, l=10, r=10), xaxis_title=None, yaxis_title=None)
+            fig_dist.update_layout(margin=dict(t=20, b=20, l=10, r=10), xaxis_title=None, yaxis_title=None)
             st.plotly_chart(fig_dist, use_container_width=True)
 
     # 4. Yatris Line Chart
@@ -214,10 +221,10 @@ if total_yatris_served > 0:
             daily_yatris = filtered_df.groupby('Date').size().reset_index(name='Yatris')
             fig_trend_yatris = px.line(daily_yatris, x='Date', y='Yatris', markers=True,
                                        line_shape='spline', color_discrete_sequence=['#0066A4']) 
-            fig_trend_yatris.update_traces(marker=dict(color='#F2B200', size=6)) 
-            fig_trend_yatris.update_layout(margin=dict(t=10, b=10, l=10, r=10), xaxis_title=None, yaxis_title=None)
+            fig_trend_yatris.update_traces(marker=dict(color='#F2B200', size=8)) 
+            fig_trend_yatris.update_layout(margin=dict(t=20, b=20, l=10, r=10), xaxis_title=None, yaxis_title=None)
             st.plotly_chart(fig_trend_yatris, use_container_width=True)
-
+            
     # -------------------------------------------------------------------------
     # 6. RAW DATA TABLE
     # -------------------------------------------------------------------------
