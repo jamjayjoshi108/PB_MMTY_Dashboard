@@ -65,6 +65,14 @@ def load_data():
         master_df = pd.concat(all_dataframes, ignore_index=True)
         master_df['Date'] = pd.to_datetime(master_df['Date'], format='%d/%m/%Y', errors='coerce')
         
+        # 🚨 THE FIX 1: Force the Age column to be purely numbers 
+        master_df['Age'] = pd.to_numeric(master_df['Age'], errors='coerce')
+        
+        # 🚨 THE FIX 2: Normalize Gender inputs (M -> Male, F -> Female, handle spaces/cases)
+        master_df['Gender'] = master_df['Gender'].str.strip().str.title()
+        master_df['Gender'] = master_df['Gender'].replace({'M': 'Male', 'F': 'Female'})
+        
+        # Format LGD Code and Village Name gracefully
         master_df['LGD Code'] = master_df['LGD Code'].fillna('').astype(str).str.replace(r'\.0$', '', regex=True)
         master_df['Village Name'] = master_df['Village Name'].fillna('').astype(str)
         
@@ -76,7 +84,7 @@ def load_data():
         
         return master_df
     else:
-        return pd.DataFrame() 
+        return pd.DataFrame()
 
 try:
     data = load_data()
