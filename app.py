@@ -167,10 +167,10 @@ if data.empty:
 # -----------------------------------------------------------------------------
 logo_col, title_col = st.columns([1, 10])
 with logo_col:
-    st.image("Aam_Aadmi_Party_logo_(English).svg.png", width=120)   # ✅ Bigger, uncropped
+    st.image("Aam_Aadmi_Party_logo_(English).svg.png", width=150)   # ✅ Bigger, uncropped
 with title_col:
     st.markdown("""
-        <h1 style='margin: 0; padding-top: 18px; color: #0066A4; font-size: 2.4rem;'>
+        <h1 style='margin: 0; padding-top: 20px; color: #0066A4; font-size: 2.4rem;'>
             🚌 Mukhyamantri Tirath Yatra
         </h1>
     """, unsafe_allow_html=True)
