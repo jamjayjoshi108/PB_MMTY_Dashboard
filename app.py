@@ -309,7 +309,7 @@ if total_yatris_served > 0:
     display_df['Date'] = display_df['Date'].dt.strftime('%d/%m/%Y')
 
     cols = ['Vendor', 'Date', 'District', 'Halka', 'LGD_Village', 'Booth No.', 'Guide Name',
-            'Guide Contact No.', 'Yatri Name', 'Gender', 'Age', 'Yatri Contact No.', 'Voter ID No.']
+            'Guide Contact No.', 'Yatri Name', 'Gender', 'Yatri Contact No.', 'Voter ID No.']
     display_df = display_df[[c for c in cols if c in display_df.columns]]
 
     csv = display_df.to_csv(index=False).encode('utf-8')
