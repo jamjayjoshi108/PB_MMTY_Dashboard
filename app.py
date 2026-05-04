@@ -12,7 +12,7 @@ st.set_page_config(page_title="Mukhyamantri Tirath Yatra Dashboard", page_icon="
 st.markdown("""
     <style>
     .block-container {
-        padding-top: 2.5rem !important;
+        padding-top: 2.8rem !important;
         padding-bottom: 0rem !important;
         margin-top: 0rem !important;
     }
