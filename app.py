@@ -16,9 +16,24 @@ st.markdown("""
         padding-bottom: 0rem !important;
         margin-top: 0rem !important;
     }
-    /* Hide sidebar toggle arrow */
     [data-testid="collapsedControl"] { display: none; }
     footer { visibility: hidden; }
+
+    /* Tighten up filter widgets */
+    div[data-testid="stSelectbox"] > div,
+    div[data-testid="stRadio"] > div {
+        padding-top: 0px !important;
+        margin-top: 0px !important;
+    }
+    div[data-testid="stRadio"] label {
+        font-size: 0.85rem !important;
+    }
+    div[data-testid="stSelectbox"] label,
+    div[data-testid="stDateInput"] label {
+        font-size: 0.85rem !important;
+        margin-bottom: 0px !important;
+    }
+
     .minute-footer {
         position: fixed;
         bottom: 0;
@@ -38,7 +53,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# 2. CONSTITUENCY → DISTRICT MASTER MAP (Hardcoded, Fuzzy-Matched)
+# 2. CONSTITUENCY → DISTRICT MASTER MAP
 # -----------------------------------------------------------------------------
 CONSTITUENCY_MAP = {
     "Sujanpur": "Pathankot", "Bhoa": "Pathankot", "Pathankot": "Pathankot",
@@ -104,7 +119,6 @@ def load_data():
             ("1gQwS1Uy4RuBpAL4kO39LqmxxIAHKDv_N3Wz7bULARgg", "727417010"),
         ],
     }
-
     all_dataframes = []
     for vendor_name, sheet_list in VENDOR_SHEETS.items():
         for sheet_id, gid in sheet_list:
@@ -149,14 +163,14 @@ if data.empty:
     st.stop()
 
 # -----------------------------------------------------------------------------
-# 4. HEADER — Logo + Title
+# 4. HEADER — Bigger Logo + Title side by side
 # -----------------------------------------------------------------------------
-logo_col, title_col = st.columns([1, 11])
+logo_col, title_col = st.columns([1, 10])
 with logo_col:
-    st.image("Aam_Aadmi_Party_logo_(English).svg.png", width=80)
+    st.image("Aam_Aadmi_Party_logo_(English).svg.png", width=120)   # ✅ Bigger, uncropped
 with title_col:
     st.markdown("""
-        <h1 style='margin: 0; padding-top: 10px; color: #0066A4;'>
+        <h1 style='margin: 0; padding-top: 18px; color: #0066A4; font-size: 2.4rem;'>
             🚌 Mukhyamantri Tirath Yatra
         </h1>
     """, unsafe_allow_html=True)
@@ -164,61 +178,95 @@ with title_col:
 st.markdown("---")
 
 # -----------------------------------------------------------------------------
-# 5. INLINE FILTERS (Full Width, Single Row)
+# 5. SESSION STATE — Date defaults
 # -----------------------------------------------------------------------------
-fc1, fc2, fc3, fc4, fc5 = st.columns([1.5, 1.5, 1.5, 1.5, 2])
+if "start_date" not in st.session_state:
+    st.session_state["start_date"] = data['Date'].min().date()
+if "end_date" not in st.session_state:
+    st.session_state["end_date"] = datetime.date.today()
 
-with fc1:
+min_date = data['Date'].min().date()
+
+# -----------------------------------------------------------------------------
+# 6. COMPACT SINGLE-LINE FILTERS
+# -----------------------------------------------------------------------------
+# 6 equal columns: Date radio | Vendor | District | Halka | LGD | (date pickers slot)
+f1, f2, f3, f4, f5 = st.columns([1.2, 1.2, 1.2, 1.2, 2.2])
+
+with f1:
     date_filter_option = st.radio(
         "📅 Date",
         options=["All", "Today", "Custom Range"],
         index=0,
-        horizontal=True
+        horizontal=False   # vertical keeps it compact in narrow column
     )
 
-with fc2:
+with f2:
     vendors = ["All"] + list(data['Vendor'].dropna().unique())
     selected_vendor = st.selectbox("🏢 Vendor", vendors)
 
-with fc3:
+with f3:
     districts = ["All"] + sorted(data['District'].dropna().unique())
     selected_district = st.selectbox("📍 District", districts)
 
-with fc4:
+with f4:
     if selected_district != "All":
         halkas = ["All"] + sorted(data[data['District'] == selected_district]['Halka'].dropna().unique())
     else:
         halkas = ["All"] + sorted(data['Halka'].dropna().unique())
     selected_halka = st.selectbox("🗳️ Halka", halkas)
 
-with fc5:
-    lgd_options = ["All"] + sorted([str(x) for x in data['LGD_Village'].dropna().unique()])
-    selected_lgd = st.selectbox("🏘️ LGD Code - Village", lgd_options)
+with f5:
+    # Show date pickers here inline when Custom Range is selected, else show LGD
+    if date_filter_option == "Custom Range":
+        dr1, dr2 = st.columns(2)
+        with dr1:
+            start_date = st.date_input(
+                "Start Date",
+                value=st.session_state["start_date"],
+                min_value=min_date,
+                max_value=datetime.date.today(),
+                key="start_date"
+            )
+        with dr2:
+            end_date = st.date_input(
+                "End Date",
+                value=st.session_state["end_date"],
+                min_value=min_date,
+                max_value=datetime.date.today(),
+                key="end_date"
+            )
+        if start_date > end_date:
+            st.error("⚠️ Start Date cannot be after End Date.")
+            st.stop()
+    else:
+        lgd_options = ["All"] + sorted([str(x) for x in data['LGD_Village'].dropna().unique()])
+        selected_lgd = st.selectbox("🏘️ LGD Code - Village", lgd_options)
 
-# ── Custom Date Range (shown only when needed, full width below filters) ──────
+# If Custom Range, LGD defaults to All (no widget shown)
+if date_filter_option == "Custom Range":
+    selected_lgd = "All"
+
+# ── Resolve dates ──────────────────────────────────────────────────────────────
 start_date, end_date = None, None
 
 if date_filter_option == "Today":
     start_date = datetime.date.today()
     end_date   = datetime.date.today()
-
 elif date_filter_option == "Custom Range":
-    min_date = data['Date'].min().date()
-    dr1, dr2, _ = st.columns([1.5, 1.5, 5])
-    with dr1:
-        start_date = st.date_input("Start Date", value=min_date, min_value=min_date, max_value=datetime.date.today(), key="start_date")
-    with dr2:
-        end_date = st.date_input("End Date", value=datetime.date.today(), min_value=min_date, max_value=datetime.date.today(), key="end_date")
-    if start_date > end_date:
-        st.error("⚠️ Start Date cannot be after End Date.")
-        st.stop()
+    start_date = st.session_state["start_date"]
+    end_date   = st.session_state["end_date"]
 
 st.markdown("---")
 
-# ── Apply Filters ─────────────────────────────────────────────────────────────
+# ── Apply Filters ──────────────────────────────────────────────────────────────
 filtered_df = data.copy()
+
 if start_date and end_date:
-    filtered_df = filtered_df[(filtered_df['Date'].dt.date >= start_date) & (filtered_df['Date'].dt.date <= end_date)]
+    filtered_df = filtered_df[
+        (filtered_df['Date'].dt.date >= start_date) &
+        (filtered_df['Date'].dt.date <= end_date)
+    ]
 if selected_vendor != "All":
     filtered_df = filtered_df[filtered_df['Vendor'] == selected_vendor]
 if selected_district != "All":
@@ -229,7 +277,7 @@ if selected_lgd != "All":
     filtered_df = filtered_df[filtered_df['LGD_Village'] == selected_lgd]
 
 # -----------------------------------------------------------------------------
-# 6. KPIs
+# 7. KPIs
 # -----------------------------------------------------------------------------
 total_yatras        = len(filtered_df)
 total_yatris_served = len(filtered_df)
@@ -257,7 +305,7 @@ kpi5.markdown(create_kpi_card("Average Age",         f"{avg_age:.1f} yrs" if pd.
 st.markdown("---")
 
 # -----------------------------------------------------------------------------
-# 7. VISUALIZATIONS
+# 8. VISUALIZATIONS
 # -----------------------------------------------------------------------------
 if total_yatris_served > 0:
 
@@ -310,7 +358,7 @@ if total_yatris_served > 0:
             st.plotly_chart(fig_vendor, use_container_width=True)
 
     # -------------------------------------------------------------------------
-    # 8. RAW DATA TABLE + DOWNLOAD
+    # 9. RAW DATA TABLE + DOWNLOAD
     # -------------------------------------------------------------------------
     st.markdown("---")
     st.markdown("📝 **Raw Yatri Manifest**")
@@ -324,14 +372,13 @@ if total_yatris_served > 0:
 
     csv = display_df.to_csv(index=False).encode('utf-8')
     st.download_button("📥 Download Manifest", csv, "manifest.csv", "text/csv")
-
     st.dataframe(display_df, use_container_width=True, hide_index=True)
 
 else:
     st.warning("No Yatra data available for the selected filters.")
 
 # -----------------------------------------------------------------------------
-# 9. FOOTER
+# 10. FOOTER
 # -----------------------------------------------------------------------------
 st.markdown('<div class="minute-footer">made with ❤️ by Jay Joshi</div>', unsafe_allow_html=True)
 
