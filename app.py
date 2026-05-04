@@ -80,7 +80,7 @@ CONSTITUENCY_MAP = {
 
 VALID_CONSTITUENCIES = list(CONSTITUENCY_MAP.keys())
 
-def fuzzy_match_halka(raw_value, threshold=80):
+def fuzzy_match_halka(raw_value, threshold=95):
     if pd.isna(raw_value) or str(raw_value).strip() == '':
         return pd.NA, pd.NA
     raw_str = str(raw_value).strip()
