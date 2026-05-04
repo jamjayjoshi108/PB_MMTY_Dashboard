@@ -12,7 +12,7 @@ st.set_page_config(page_title="Mukhyamantri Tirath Yatra Dashboard", page_icon="
 st.markdown("""
     <style>
     .block-container {
-        padding-top: 1rem !important;
+        padding-top: 2.5rem !important;
         padding-bottom: 0rem !important;
         margin-top: 0rem !important;
     }
@@ -167,7 +167,7 @@ if data.empty:
 # -----------------------------------------------------------------------------
 logo_col, title_col = st.columns([1, 10])
 with logo_col:
-    st.image("Aam_Aadmi_Party_logo_(English).svg.png", width=150)   # ✅ Bigger, uncropped
+    st.image("Aam_Aadmi_Party_logo_(English).svg.png", width=250)   # ✅ Bigger, uncropped
 with title_col:
     st.markdown("""
         <h1 style='margin: 0; padding-top: 20px; color: #0066A4; font-size: 2.4rem;'>
@@ -180,8 +180,10 @@ st.markdown("---")
 # -----------------------------------------------------------------------------
 # 5. SESSION STATE — Date defaults
 # -----------------------------------------------------------------------------
+MIN_DATE = datetime.date(2025, 1, 1)  # ✅ Hardcoded — never blocks any yatra date
+
 if "start_date" not in st.session_state:
-    st.session_state["start_date"] = data['Date'].min().date()
+    st.session_state["start_date"] = MIN_DATE
 if "end_date" not in st.session_state:
     st.session_state["end_date"] = datetime.date.today()
 
@@ -224,7 +226,7 @@ with f5:
             start_date = st.date_input(
                 "Start Date",
                 value=st.session_state["start_date"],
-                min_value=min_date,
+                min_value=MIN_DATE,
                 max_value=datetime.date.today(),
                 key="start_date"
             )
@@ -232,7 +234,7 @@ with f5:
             end_date = st.date_input(
                 "End Date",
                 value=st.session_state["end_date"],
-                min_value=min_date,
+                min_value=MIN_DATE,
                 max_value=datetime.date.today(),
                 key="end_date"
             )
