@@ -45,10 +45,13 @@ st.markdown("""
 @st.cache_data(ttl=10) # Refreshes every 10 seconds
 def load_data():
     VENDOR_SHEETS = {
-        "EaseMyTrip": "1ejxAeYp0RFiXGq07A2VJbasOatfNCB_y3PTY5v4ct0g",
-        "MachConferences": "1gBabD_as3WvaSq4JUX_Si5dJBGxQNTuxY3_ILDEVbEs",
-        "Zenith": "1gQwS1Uy4RuBpAL4kO39LqmxxIAHKDv_N3Wz7bULARgg"
-    }
+    "EaseMyTrip": [("1ejxAeYp0RFiXGq07A2VJbasOatfNCB_y3PTY5v4ct0g", "0")],
+    "MachConferences": [("1gBabD_as3WvaSq4JUX_Si5dJBGxQNTuxY3_ILDEVbEs", "0")],
+    "Zenith": [
+        ("1gQwS1Uy4RuBpAL4kO39LqmxxIAHKDv_N3Wz7bULARgg", "0"),  # Replace with actual gid
+        ("1gQwS1Uy4RuBpAL4kO39LqmxxIAHKDv_N3Wz7bULARgg", "727417010"),  # Replace with actual gid
+    ],
+}
     
     all_dataframes = []
     
