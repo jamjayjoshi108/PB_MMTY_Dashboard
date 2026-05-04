@@ -174,7 +174,7 @@ if date_filter_option == "Today":
     end_date   = datetime.date.today()
 
 elif date_filter_option == "Custom Range":
-    min_date = data['Date'].min()
+    min_date = data['Date'].min().date()  # ✅ Convert Timestamp → date
     col_sd, col_ed = st.sidebar.columns(2)
     with col_sd:
         start_date = st.date_input("Start Date", value=min_date, min_value=min_date, max_value=datetime.date.today(), key="start_date")
