@@ -7,7 +7,7 @@ from rapidfuzz import process, fuzz
 # -----------------------------------------------------------------------------
 # 1. PAGE CONFIGURATION & AAP CUSTOM CSS
 # -----------------------------------------------------------------------------
-st.set_page_config(page_title="Mukhyamantri Tirath Yatra Dashboard", page_icon="🚌", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Mukhyamantri Tirath Yatra Dashboard", page_icon="🚌", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
     <style>
@@ -16,7 +16,9 @@ st.markdown("""
         padding-bottom: 0rem !important;
         margin-top: 0rem !important;
     }
-    footer {visibility: hidden;}
+    /* Hide sidebar toggle arrow */
+    [data-testid="collapsedControl"] { display: none; }
+    footer { visibility: hidden; }
     .minute-footer {
         position: fixed;
         bottom: 0;
@@ -90,7 +92,7 @@ def fuzzy_match_halka(raw_value, threshold=95):
     return raw_str, pd.NA
 
 # -----------------------------------------------------------------------------
-# 3. DATA CONNECTION (Fetching all 3 Vendors)
+# 3. DATA CONNECTION
 # -----------------------------------------------------------------------------
 @st.cache_data(ttl=10)
 def load_data():
@@ -98,13 +100,12 @@ def load_data():
         "EaseMyTrip": [("1ejxAeYp0RFiXGq07A2VJbasOatfNCB_y3PTY5v4ct0g", "0")],
         "MachConferences": [("1gBabD_as3WvaSq4JUX_Si5dJBGxQNTuxY3_ILDEVbEs", "0")],
         "Zenith": [
-            ("1gQwS1Uy4RuBpAL4kO39LqmxxIAHKDv_N3Wz7bULARgg", "0"),        # Cluster 1 — replace gid if needed
-            ("1gQwS1Uy4RuBpAL4kO39LqmxxIAHKDv_N3Wz7bULARgg", "727417010"),  # Cluster 3 — replace with actual gid
+            ("1gQwS1Uy4RuBpAL4kO39LqmxxIAHKDv_N3Wz7bULARgg", "0"),
+            ("1gQwS1Uy4RuBpAL4kO39LqmxxIAHKDv_N3Wz7bULARgg", "727417010"),
         ],
     }
 
     all_dataframes = []
-
     for vendor_name, sheet_list in VENDOR_SHEETS.items():
         for sheet_id, gid in sheet_list:
             csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
@@ -118,24 +119,14 @@ def load_data():
 
     if all_dataframes:
         master_df = pd.concat(all_dataframes, ignore_index=True)
-
-        # ── Date ──────────────────────────────────────────────────────────────
         master_df['Date'] = pd.to_datetime(master_df['Date'], format='%d/%m/%Y', errors='coerce')
-
-        # ── Age ───────────────────────────────────────────────────────────────
         master_df['Age'] = pd.to_numeric(master_df['Age'], errors='coerce')
-
-        # ── Gender (any non-Female value → Male) ──────────────────────────────
         master_df['Gender'] = master_df['Gender'].str.strip().str.title()
         master_df['Gender'] = master_df['Gender'].replace({'M': 'Male', 'F': 'Female'})
         master_df['Gender'] = master_df['Gender'].apply(lambda x: x if x == 'Female' else 'Male')
-
-        # ── Halka + District (fuzzy auto-correct) ─────────────────────────────
         master_df[['Halka', 'District']] = master_df['Halka'].apply(
             lambda x: pd.Series(fuzzy_match_halka(x))
         )
-
-        # ── LGD Code & Village ────────────────────────────────────────────────
         master_df['LGD Code'] = master_df['LGD Code'].fillna('').astype(str).str.replace(r'\\.0$', '', regex=True)
         master_df['Village Name'] = master_df['Village Name'].fillna('').astype(str)
         master_df['LGD_Village'] = master_df.apply(
@@ -143,7 +134,6 @@ def load_data():
             axis=1
         )
         master_df['LGD_Village'] = master_df['LGD_Village'].replace('', pd.NA)
-
         return master_df
     else:
         return pd.DataFrame()
@@ -154,19 +144,58 @@ except Exception as e:
     st.error(f"⚠️ Fatal error compiling master database: {e}")
     st.stop()
 
-# -----------------------------------------------------------------------------
-# 4. SIDEBAR FILTERS
-# -----------------------------------------------------------------------------
-st.sidebar.image("Aam_Aadmi_Party_logo_(English).svg.png", width=150)
-# ── Date Filter ───────────────────────────────────────────────────────────────
-st.sidebar.markdown("**Select Date Range**")
-date_filter_option = st.sidebar.radio(
-    "Date Filter",
-    options=["All", "Today", "Custom Range"],
-    index=0,  # "All" is default
-    label_visibility="collapsed"
-)
+if data.empty:
+    st.warning("Awaiting data from vendors...")
+    st.stop()
 
+# -----------------------------------------------------------------------------
+# 4. HEADER — Logo + Title
+# -----------------------------------------------------------------------------
+logo_col, title_col = st.columns([1, 11])
+with logo_col:
+    st.image("Aam_Aadmi_Party_logo_(English).svg.png", width=80)
+with title_col:
+    st.markdown("""
+        <h1 style='margin: 0; padding-top: 10px; color: #0066A4;'>
+            🚌 Mukhyamantri Tirath Yatra
+        </h1>
+    """, unsafe_allow_html=True)
+
+st.markdown("---")
+
+# -----------------------------------------------------------------------------
+# 5. INLINE FILTERS (Full Width, Single Row)
+# -----------------------------------------------------------------------------
+fc1, fc2, fc3, fc4, fc5 = st.columns([1.5, 1.5, 1.5, 1.5, 2])
+
+with fc1:
+    date_filter_option = st.radio(
+        "📅 Date",
+        options=["All", "Today", "Custom Range"],
+        index=0,
+        horizontal=True
+    )
+
+with fc2:
+    vendors = ["All"] + list(data['Vendor'].dropna().unique())
+    selected_vendor = st.selectbox("🏢 Vendor", vendors)
+
+with fc3:
+    districts = ["All"] + sorted(data['District'].dropna().unique())
+    selected_district = st.selectbox("📍 District", districts)
+
+with fc4:
+    if selected_district != "All":
+        halkas = ["All"] + sorted(data[data['District'] == selected_district]['Halka'].dropna().unique())
+    else:
+        halkas = ["All"] + sorted(data['Halka'].dropna().unique())
+    selected_halka = st.selectbox("🗳️ Halka", halkas)
+
+with fc5:
+    lgd_options = ["All"] + sorted([str(x) for x in data['LGD_Village'].dropna().unique()])
+    selected_lgd = st.selectbox("🏘️ LGD Code - Village", lgd_options)
+
+# ── Custom Date Range (shown only when needed, full width below filters) ──────
 start_date, end_date = None, None
 
 if date_filter_option == "Today":
@@ -174,35 +203,20 @@ if date_filter_option == "Today":
     end_date   = datetime.date.today()
 
 elif date_filter_option == "Custom Range":
-    min_date = data['Date'].min().date()  # ✅ Convert Timestamp → date
-    col_sd, col_ed = st.sidebar.columns(2)
-    with col_sd:
+    min_date = data['Date'].min().date()
+    dr1, dr2, _ = st.columns([1.5, 1.5, 5])
+    with dr1:
         start_date = st.date_input("Start Date", value=min_date, min_value=min_date, max_value=datetime.date.today(), key="start_date")
-    with col_ed:
+    with dr2:
         end_date = st.date_input("End Date", value=datetime.date.today(), min_value=min_date, max_value=datetime.date.today(), key="end_date")
-
     if start_date > end_date:
-        st.sidebar.error("⚠️ Start Date cannot be after End Date.")
+        st.error("⚠️ Start Date cannot be after End Date.")
         st.stop()
 
-vendors = ["All"] + list(data['Vendor'].dropna().unique())
-selected_vendor = st.sidebar.selectbox("Select Vendor Agency", vendors)
-
-districts = ["All"] + list(data['District'].dropna().unique())
-selected_district = st.sidebar.selectbox("Select District", districts)
-
-if selected_district != "All":
-    halkas = ["All"] + list(data[data['District'] == selected_district]['Halka'].dropna().unique())
-else:
-    halkas = ["All"] + list(data['Halka'].dropna().unique())
-selected_halka = st.sidebar.selectbox("Select Halka", halkas)
-
-lgd_options = ["All"] + sorted([str(x) for x in data['LGD_Village'].dropna().unique()])
-selected_lgd = st.sidebar.selectbox("Select LGD Code - Village", lgd_options)
+st.markdown("---")
 
 # ── Apply Filters ─────────────────────────────────────────────────────────────
 filtered_df = data.copy()
-
 if start_date and end_date:
     filtered_df = filtered_df[(filtered_df['Date'].dt.date >= start_date) & (filtered_df['Date'].dt.date <= end_date)]
 if selected_vendor != "All":
@@ -215,10 +229,8 @@ if selected_lgd != "All":
     filtered_df = filtered_df[filtered_df['LGD_Village'] == selected_lgd]
 
 # -----------------------------------------------------------------------------
-# 5. DASHBOARD HEADER & KPIs
+# 6. KPIs
 # -----------------------------------------------------------------------------
-st.title("🚌 Mukhyamantri Tirath Yatra")
-
 total_yatras        = len(filtered_df)
 total_yatris_served = len(filtered_df)
 districts_covered   = filtered_df['District'].nunique()
@@ -236,20 +248,19 @@ def create_kpi_card(title, value):
     """
 
 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
-kpi1.markdown(create_kpi_card("Total Yatras",        f"{total_yatras:,}"),          unsafe_allow_html=True)
-kpi2.markdown(create_kpi_card("Total Yatris Served", f"{total_yatris_served:,}"),   unsafe_allow_html=True)
-kpi3.markdown(create_kpi_card("Districts Covered",   f"{districts_covered:,}"),     unsafe_allow_html=True)
-kpi4.markdown(create_kpi_card("Halkas Covered",      f"{halkas_covered:,}"),        unsafe_allow_html=True)
+kpi1.markdown(create_kpi_card("Total Yatras",        f"{total_yatras:,}"),        unsafe_allow_html=True)
+kpi2.markdown(create_kpi_card("Total Yatris Served", f"{total_yatris_served:,}"), unsafe_allow_html=True)
+kpi3.markdown(create_kpi_card("Districts Covered",   f"{districts_covered:,}"),   unsafe_allow_html=True)
+kpi4.markdown(create_kpi_card("Halkas Covered",      f"{halkas_covered:,}"),      unsafe_allow_html=True)
 kpi5.markdown(create_kpi_card("Average Age",         f"{avg_age:.1f} yrs" if pd.notna(avg_age) else "0 yrs"), unsafe_allow_html=True)
 
 st.markdown("---")
 
 # -----------------------------------------------------------------------------
-# 6. VISUALIZATIONS
+# 7. VISUALIZATIONS
 # -----------------------------------------------------------------------------
 if total_yatris_served > 0:
 
-    # --- ROW 1 ---
     col1, col2 = st.columns(2)
 
     with col1:
@@ -275,7 +286,6 @@ if total_yatris_served > 0:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # --- ROW 2 ---
     col3, col4 = st.columns(2)
 
     with col3:
@@ -300,7 +310,7 @@ if total_yatris_served > 0:
             st.plotly_chart(fig_vendor, use_container_width=True)
 
     # -------------------------------------------------------------------------
-    # 7. RAW DATA TABLE + DOWNLOAD
+    # 8. RAW DATA TABLE + DOWNLOAD
     # -------------------------------------------------------------------------
     st.markdown("---")
     st.markdown("📝 **Raw Yatri Manifest**")
@@ -321,7 +331,7 @@ else:
     st.warning("No Yatra data available for the selected filters.")
 
 # -----------------------------------------------------------------------------
-# 8. FOOTER
+# 9. FOOTER
 # -----------------------------------------------------------------------------
 st.markdown('<div class="minute-footer">made with ❤️ by Jay Joshi</div>', unsafe_allow_html=True)
 
