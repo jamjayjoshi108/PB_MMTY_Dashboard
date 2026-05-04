@@ -158,22 +158,32 @@ except Exception as e:
 # 4. SIDEBAR FILTERS
 # -----------------------------------------------------------------------------
 st.sidebar.image("Aam_Aadmi_Party_logo_(English).svg.png", width=150)
-st.sidebar.header("Filter Data")
+# ── Date Filter ───────────────────────────────────────────────────────────────
+st.sidebar.markdown("**Select Date Range**")
+date_filter_option = st.sidebar.radio(
+    "Date Filter",
+    options=["All", "Today", "Custom Range"],
+    index=0,  # "All" is default
+    label_visibility="collapsed"
+)
 
-if data.empty:
-    st.warning("Awaiting data from vendors...")
-    st.stop()
+start_date, end_date = None, None
 
-min_date, max_date = data['Date'].min(), data['Date'].max()
-if pd.notna(min_date) and pd.notna(max_date):
-    start_date, end_date = st.sidebar.date_input(
-        "Select Date Range",
-        value=[min_date, max_date],
-        min_value=min_date,
-        max_value=datetime.date.today()  # ✅ Never blocks future dates
-    )
-else:
-    start_date, end_date = None, None
+if date_filter_option == "Today":
+    start_date = datetime.date.today()
+    end_date   = datetime.date.today()
+
+elif date_filter_option == "Custom Range":
+    min_date = data['Date'].min()
+    col_sd, col_ed = st.sidebar.columns(2)
+    with col_sd:
+        start_date = st.date_input("Start Date", value=min_date, min_value=min_date, max_value=datetime.date.today(), key="start_date")
+    with col_ed:
+        end_date = st.date_input("End Date", value=datetime.date.today(), min_value=min_date, max_value=datetime.date.today(), key="end_date")
+
+    if start_date > end_date:
+        st.sidebar.error("⚠️ Start Date cannot be after End Date.")
+        st.stop()
 
 vendors = ["All"] + list(data['Vendor'].dropna().unique())
 selected_vendor = st.sidebar.selectbox("Select Vendor Agency", vendors)
