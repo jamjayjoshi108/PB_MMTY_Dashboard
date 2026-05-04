@@ -77,6 +77,9 @@ def load_data():
         master_df['Gender'] = master_df['Gender'].str.strip().str.title()
         master_df['Gender'] = master_df['Gender'].replace({'M': 'Male', 'F': 'Female'})
         
+        # Any value that is not 'Female' defaults to 'Male'
+        master_df['Gender'] = master_df['Gender'].apply(lambda x: x if x == 'Female' else 'Male')
+        
         # Format LGD Code and Village Name gracefully
         master_df['LGD Code'] = master_df['LGD Code'].fillna('').astype(str).str.replace(r'\.0$', '', regex=True)
         master_df['Village Name'] = master_df['Village Name'].fillna('').astype(str)
