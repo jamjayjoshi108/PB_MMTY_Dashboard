@@ -1,26 +1,22 @@
 import streamlit as st
 import pandas as pd
-import datetime
-
 import plotly.express as px
+import datetime
+from rapidfuzz import process, fuzz
 
 # -----------------------------------------------------------------------------
 # 1. PAGE CONFIGURATION & AAP CUSTOM CSS
 # -----------------------------------------------------------------------------
 st.set_page_config(page_title="Mukhyamantri Tirath Yatra Dashboard", page_icon="🚌", layout="wide", initial_sidebar_state="expanded")
 
-# AAP Color Palette: Navy Blue (#0066A4) and Broom Yellow (#F2B200)
 st.markdown("""
     <style>
-    /* Nuke the useless top space */
     .block-container {
         padding-top: 1rem !important;
         padding-bottom: 0rem !important;
         margin-top: 0rem !important;
     }
-    
     footer {visibility: hidden;}
-    
     .minute-footer {
         position: fixed;
         bottom: 0;
@@ -40,11 +36,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# 2. DATA CONNECTION (Fetching all 3 Vendors)
+# 2. CONSTITUENCY → DISTRICT MASTER MAP (Hardcoded, Fuzzy-Matched)
 # -----------------------------------------------------------------------------
-from rapidfuzz import process, fuzz
-
-# Master Punjab Constituency → District mapping
 CONSTITUENCY_MAP = {
     "Sujanpur": "Pathankot", "Bhoa": "Pathankot", "Pathankot": "Pathankot",
     "Gurdaspur": "Gurdaspur", "Dina Nagar": "Gurdaspur", "Qadian": "Gurdaspur",
@@ -88,63 +81,69 @@ CONSTITUENCY_MAP = {
 VALID_CONSTITUENCIES = list(CONSTITUENCY_MAP.keys())
 
 def fuzzy_match_halka(raw_value, threshold=80):
-    """Fuzzy match a raw Halka string to the nearest valid constituency."""
     if pd.isna(raw_value) or str(raw_value).strip() == '':
         return pd.NA, pd.NA
     raw_str = str(raw_value).strip()
     match, score, _ = process.extractOne(raw_str, VALID_CONSTITUENCIES, scorer=fuzz.token_sort_ratio)
     if score >= threshold:
         return match, CONSTITUENCY_MAP[match]
-    return raw_str, pd.NA  # Keep original if no confident match
-    
-@st.cache_data(ttl=10) # Refreshes every 10 seconds
+    return raw_str, pd.NA
+
+# -----------------------------------------------------------------------------
+# 3. DATA CONNECTION (Fetching all 3 Vendors)
+# -----------------------------------------------------------------------------
+@st.cache_data(ttl=10)
 def load_data():
     VENDOR_SHEETS = {
-    "EaseMyTrip": [("1ejxAeYp0RFiXGq07A2VJbasOatfNCB_y3PTY5v4ct0g", "0")],
-    "MachConferences": [("1gBabD_as3WvaSq4JUX_Si5dJBGxQNTuxY3_ILDEVbEs", "0")],
-    "Zenith": [
-        ("1gQwS1Uy4RuBpAL4kO39LqmxxIAHKDv_N3Wz7bULARgg", "0"),  # Replace with actual gid
-        ("1gQwS1Uy4RuBpAL4kO39LqmxxIAHKDv_N3Wz7bULARgg", "727417010"),  # Replace with actual gid
-    ],
-}
-    
+        "EaseMyTrip": [("1ejxAeYp0RFiXGq07A2VJbasOatfNCB_y3PTY5v4ct0g", "0")],
+        "MachConferences": [("1gBabD_as3WvaSq4JUX_Si5dJBGxQNTuxY3_ILDEVbEs", "0")],
+        "Zenith": [
+            ("1gQwS1Uy4RuBpAL4kO39LqmxxIAHKDv_N3Wz7bULARgg", "0"),        # Cluster 1 — replace gid if needed
+            ("1gQwS1Uy4RuBpAL4kO39LqmxxIAHKDv_N3Wz7bULARgg", "CLUSTER_3_GID"),  # Cluster 3 — replace with actual gid
+        ],
+    }
+
     all_dataframes = []
-    
+
     for vendor_name, sheet_list in VENDOR_SHEETS.items():
         for sheet_id, gid in sheet_list:
             csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
             try:
                 df = pd.read_csv(csv_url)
                 df = df.dropna(subset=['Date', 'Yatri Name'], how='all')
-                df['Vendor'] = vendor_name  # Both Zenith tabs will be labeled "Zenith"
+                df['Vendor'] = vendor_name
                 all_dataframes.append(df)
             except Exception as e:
                 st.warning(f"⚠️ Could not load data for {vendor_name} (gid={gid}).")
-    
+
     if all_dataframes:
         master_df = pd.concat(all_dataframes, ignore_index=True)
+
+        # ── Date ──────────────────────────────────────────────────────────────
         master_df['Date'] = pd.to_datetime(master_df['Date'], format='%d/%m/%Y', errors='coerce')
-        
-        # 🚨 THE FIX 1: Force the Age column to be purely numbers 
+
+        # ── Age ───────────────────────────────────────────────────────────────
         master_df['Age'] = pd.to_numeric(master_df['Age'], errors='coerce')
-        
-        # 🚨 THE FIX 2: Normalize Gender inputs (M -> Male, F -> Female, handle spaces/cases)
+
+        # ── Gender (any non-Female value → Male) ──────────────────────────────
         master_df['Gender'] = master_df['Gender'].str.strip().str.title()
         master_df['Gender'] = master_df['Gender'].replace({'M': 'Male', 'F': 'Female'})
-        
-        # Any value that is not 'Female' defaults to 'Male'
         master_df['Gender'] = master_df['Gender'].apply(lambda x: x if x == 'Female' else 'Male')
-        
-        # Format LGD Code and Village Name gracefully
-        master_df['LGD Code'] = master_df['LGD Code'].fillna('').astype(str).str.replace(r'\.0$', '', regex=True)
+
+        # ── Halka + District (fuzzy auto-correct) ─────────────────────────────
+        master_df[['Halka', 'District']] = master_df['Halka'].apply(
+            lambda x: pd.Series(fuzzy_match_halka(x))
+        )
+
+        # ── LGD Code & Village ────────────────────────────────────────────────
+        master_df['LGD Code'] = master_df['LGD Code'].fillna('').astype(str).str.replace(r'\\.0$', '', regex=True)
         master_df['Village Name'] = master_df['Village Name'].fillna('').astype(str)
-        
         master_df['LGD_Village'] = master_df.apply(
             lambda x: f"{x['LGD Code']} - {x['Village Name']}" if x['LGD Code'] and x['Village Name'] else x['LGD Code'] + x['Village Name'],
             axis=1
         )
         master_df['LGD_Village'] = master_df['LGD_Village'].replace('', pd.NA)
-        
+
         return master_df
     else:
         return pd.DataFrame()
@@ -155,13 +154,8 @@ except Exception as e:
     st.error(f"⚠️ Fatal error compiling master database: {e}")
     st.stop()
 
-# Auto-correct Halka and derive District from master list
-master_df[['Halka', 'District']] = master_df['Halka'].apply(
-    lambda x: pd.Series(fuzzy_match_halka(x))
-)
-
 # -----------------------------------------------------------------------------
-# 3. SIDEBAR FILTERS
+# 4. SIDEBAR FILTERS
 # -----------------------------------------------------------------------------
 st.sidebar.image("Aam_Aadmi_Party_logo_(English).svg.png", width=150)
 st.sidebar.header("Filter Data")
@@ -176,11 +170,10 @@ if pd.notna(min_date) and pd.notna(max_date):
         "Select Date Range",
         value=[min_date, max_date],
         min_value=min_date,
-        max_value=datetime.date.today()  # ✅ Always allows up to today
+        max_value=datetime.date.today()  # ✅ Never blocks future dates
     )
 else:
     start_date, end_date = None, None
-
 
 vendors = ["All"] + list(data['Vendor'].dropna().unique())
 selected_vendor = st.sidebar.selectbox("Select Vendor Agency", vendors)
@@ -197,6 +190,7 @@ selected_halka = st.sidebar.selectbox("Select Halka", halkas)
 lgd_options = ["All"] + sorted([str(x) for x in data['LGD_Village'].dropna().unique()])
 selected_lgd = st.sidebar.selectbox("Select LGD Code - Village", lgd_options)
 
+# ── Apply Filters ─────────────────────────────────────────────────────────────
 filtered_df = data.copy()
 
 if start_date and end_date:
@@ -211,17 +205,16 @@ if selected_lgd != "All":
     filtered_df = filtered_df[filtered_df['LGD_Village'] == selected_lgd]
 
 # -----------------------------------------------------------------------------
-# 4. DASHBOARD HEADER & 5 BULLETPROOF KPIs
+# 5. DASHBOARD HEADER & KPIs
 # -----------------------------------------------------------------------------
 st.title("🚌 Mukhyamantri Tirath Yatra")
 
-total_yatras = len(filtered_df) 
-total_yatris_served = len(filtered_df) 
-districts_covered = filtered_df['District'].nunique()
-halkas_covered = filtered_df['Halka'].nunique()
-avg_age = filtered_df['Age'].mean()
+total_yatras        = len(filtered_df)
+total_yatris_served = len(filtered_df)
+districts_covered   = filtered_df['District'].nunique()
+halkas_covered      = filtered_df['Halka'].nunique()
+avg_age             = filtered_df['Age'].mean()
 
-# Slightly adjusted padding and font size so all 5 cards fit perfectly
 def create_kpi_card(title, value):
     return f"""
     <div style="background: linear-gradient(135deg, #0066A4 0%, #002244 100%); 
@@ -232,24 +225,23 @@ def create_kpi_card(title, value):
     </div>
     """
 
-# Changed to 5 columns
 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
-kpi1.markdown(create_kpi_card("Total Yatras", f"{total_yatras:,}"), unsafe_allow_html=True)
-kpi2.markdown(create_kpi_card("Total Yatris Served", f"{total_yatris_served:,}"), unsafe_allow_html=True)
-kpi3.markdown(create_kpi_card("Districts Covered", f"{districts_covered:,}"), unsafe_allow_html=True)
-kpi4.markdown(create_kpi_card("Halkas Covered", f"{halkas_covered:,}"), unsafe_allow_html=True)
-kpi5.markdown(create_kpi_card("Average Age", f"{avg_age:.1f} yrs" if pd.notna(avg_age) else "0 yrs"), unsafe_allow_html=True)
+kpi1.markdown(create_kpi_card("Total Yatras",        f"{total_yatras:,}"),          unsafe_allow_html=True)
+kpi2.markdown(create_kpi_card("Total Yatris Served", f"{total_yatris_served:,}"),   unsafe_allow_html=True)
+kpi3.markdown(create_kpi_card("Districts Covered",   f"{districts_covered:,}"),     unsafe_allow_html=True)
+kpi4.markdown(create_kpi_card("Halkas Covered",      f"{halkas_covered:,}"),        unsafe_allow_html=True)
+kpi5.markdown(create_kpi_card("Average Age",         f"{avg_age:.1f} yrs" if pd.notna(avg_age) else "0 yrs"), unsafe_allow_html=True)
 
 st.markdown("---")
 
 # -----------------------------------------------------------------------------
-# 5. VISUALIZATIONS (SPACIOUS 2x2 GRID)
+# 6. VISUALIZATIONS
 # -----------------------------------------------------------------------------
 if total_yatris_served > 0:
+
     # --- ROW 1 ---
     col1, col2 = st.columns(2)
 
-    # 1. Gender Pie Chart
     with col1:
         with st.container(border=True):
             st.markdown("👥 **Gender Distribution**")
@@ -257,10 +249,10 @@ if total_yatris_served > 0:
             gender_counts.columns = ['Gender', 'Count']
             fig_gender = px.pie(gender_counts, values='Count', names='Gender', hole=0.4,
                                 color_discrete_sequence=['#0066A4', '#F2B200'])
-            fig_gender.update_layout(margin=dict(t=20, b=20, l=10, r=10), showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5))
+            fig_gender.update_layout(margin=dict(t=20, b=20, l=10, r=10), showlegend=True,
+                                     legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5))
             st.plotly_chart(fig_gender, use_container_width=True)
 
-    # 2. Yatras Line Chart
     with col2:
         with st.container(border=True):
             st.markdown("📈 **Yatras Over Time**")
@@ -271,52 +263,55 @@ if total_yatris_served > 0:
             fig_trend_yatras.update_layout(margin=dict(t=20, b=20, l=10, r=10), xaxis_title=None, yaxis_title=None)
             st.plotly_chart(fig_trend_yatras, use_container_width=True)
 
-    # Add a little breathing room between the rows
     st.markdown("<br>", unsafe_allow_html=True)
 
     # --- ROW 2 ---
     col3, col4 = st.columns(2)
-    
-    # 3. Turnout Bar Chart
+
     with col3:
         with st.container(border=True):
             st.markdown("📍 **Turnout by District**")
-            dist_counts = filtered_df['District'].value_counts().reset_index()
+            dist_counts = filtered_df['District'].value_counts().reset_index().head(10)
             dist_counts.columns = ['District', 'Turnout']
             fig_dist = px.bar(dist_counts, x='District', y='Turnout')
             fig_dist.update_traces(marker_color='#0066A4')
             fig_dist.update_layout(margin=dict(t=20, b=20, l=10, r=10), xaxis_title=None, yaxis_title=None)
             st.plotly_chart(fig_dist, use_container_width=True)
 
-    # 4. Yatris Line Chart
     with col4:
         with st.container(border=True):
-            st.markdown("👤 **Yatris Over Time**")
-            daily_yatris = filtered_df.groupby('Date').size().reset_index(name='Yatris')
-            fig_trend_yatris = px.line(daily_yatris, x='Date', y='Yatris', markers=True,
-                                       line_shape='spline', color_discrete_sequence=['#0066A4']) 
-            fig_trend_yatris.update_traces(marker=dict(color='#F2B200', size=8)) 
-            fig_trend_yatris.update_layout(margin=dict(t=20, b=20, l=10, r=10), xaxis_title=None, yaxis_title=None)
-            st.plotly_chart(fig_trend_yatris, use_container_width=True)
-            
+            st.markdown("🏢 **Yatris by Vendor**")
+            vendor_counts = filtered_df['Vendor'].value_counts().reset_index()
+            vendor_counts.columns = ['Vendor', 'Count']
+            fig_vendor = px.pie(vendor_counts, values='Count', names='Vendor', hole=0.4,
+                                color_discrete_sequence=['#0066A4', '#F2B200', '#002244'])
+            fig_vendor.update_layout(margin=dict(t=20, b=20, l=10, r=10), showlegend=True,
+                                     legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5))
+            st.plotly_chart(fig_vendor, use_container_width=True)
+
     # -------------------------------------------------------------------------
-    # 6. RAW DATA TABLE
+    # 7. RAW DATA TABLE + DOWNLOAD
     # -------------------------------------------------------------------------
     st.markdown("---")
     st.markdown("📝 **Raw Yatri Manifest**")
+
     display_df = filtered_df.copy()
     display_df['Date'] = display_df['Date'].dt.strftime('%d/%m/%Y')
-    
-    cols = ['Vendor', 'Date', 'District', 'Halka', 'LGD_Village', 'Booth No.', 'Guide Name', 'Guide Contact No.', 'Yatri Name', 'Gender', 'Age', 'Yatri Contact No.', 'Voter ID No.']
+
+    cols = ['Vendor', 'Date', 'District', 'Halka', 'LGD_Village', 'Booth No.', 'Guide Name',
+            'Guide Contact No.', 'Yatri Name', 'Gender', 'Age', 'Yatri Contact No.', 'Voter ID No.']
     display_df = display_df[[c for c in cols if c in display_df.columns]]
-    
+
+    csv = display_df.to_csv(index=False).encode('utf-8')
+    st.download_button("📥 Download Manifest", csv, "manifest.csv", "text/csv")
+
     st.dataframe(display_df, use_container_width=True, hide_index=True)
 
 else:
     st.warning("No Yatra data available for the selected filters.")
 
 # -----------------------------------------------------------------------------
-# 7. FOOTER
+# 8. FOOTER
 # -----------------------------------------------------------------------------
 st.markdown('<div class="minute-footer">made with ❤️ by Jay Joshi</div>', unsafe_allow_html=True)
 
