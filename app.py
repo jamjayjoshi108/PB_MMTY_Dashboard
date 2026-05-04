@@ -42,6 +42,61 @@ st.markdown("""
 # -----------------------------------------------------------------------------
 # 2. DATA CONNECTION (Fetching all 3 Vendors)
 # -----------------------------------------------------------------------------
+from rapidfuzz import process, fuzz
+
+# Master Punjab Constituency → District mapping
+CONSTITUENCY_MAP = {
+    "Sujanpur": "Pathankot", "Bhoa": "Pathankot", "Pathankot": "Pathankot",
+    "Gurdaspur": "Gurdaspur", "Dina Nagar": "Gurdaspur", "Qadian": "Gurdaspur",
+    "Batala": "Gurdaspur", "Sri Hargobindpur": "Gurdaspur", "Fatehgarh Churian": "Gurdaspur",
+    "Dera Baba Nanak": "Gurdaspur", "Ajnala": "Amritsar", "Raja Sansi": "Amritsar",
+    "Majitha": "Amritsar", "Jandiala": "Amritsar", "Amritsar North": "Amritsar",
+    "Amritsar West": "Amritsar", "Amritsar Central": "Amritsar", "Amritsar East": "Amritsar",
+    "Amritsar South": "Amritsar", "Attari": "Amritsar", "Tarn Taran": "Tarn Taran",
+    "Khem Karan": "Tarn Taran", "Patti": "Tarn Taran", "Khadoor Sahib": "Tarn Taran",
+    "Baba Bakala": "Amritsar", "Bholath": "Kapurthala", "Kapurthala": "Kapurthala",
+    "Sultanpur Lodhi": "Kapurthala", "Phagwara": "Kapurthala", "Phillaur": "Jalandhar",
+    "Nakodar": "Jalandhar", "Shahkot": "Jalandhar", "Kartarpur": "Jalandhar",
+    "Jalandhar West": "Jalandhar", "Jalandhar Central": "Jalandhar", "Jalandhar North": "Jalandhar",
+    "Jalandhar Cantt": "Jalandhar", "Adampur": "Jalandhar", "Mukerian": "Hoshiarpur",
+    "Dasuya": "Hoshiarpur", "Urmar": "Hoshiarpur", "Sham Chaurasi": "Hoshiarpur",
+    "Hoshiarpur": "Hoshiarpur", "Chabbewal": "Hoshiarpur", "Garhshankar": "Hoshiarpur",
+    "Banga": "S.B.S. Nagar", "Nawan Shahr": "S.B.S. Nagar", "Balachaur": "S.B.S. Nagar",
+    "Anandpur Sahib": "Rupnagar", "Rupnagar": "Rupnagar", "Chamkaur Sahib": "Rupnagar",
+    "Kharar": "S.A.S. Nagar", "S.A.S. Nagar": "S.A.S. Nagar", "Bassi Pathana": "Fatehgarh Sahib",
+    "Fatehgarh Sahib": "Fatehgarh Sahib", "Amloh": "Fatehgarh Sahib", "Khanna": "Ludhiana",
+    "Samrala": "Ludhiana", "Sahnewal": "Ludhiana", "Ludhiana East": "Ludhiana",
+    "Ludhiana South": "Ludhiana", "Atam Nagar": "Ludhiana", "Ludhiana Central": "Ludhiana",
+    "Ludhiana West": "Ludhiana", "Ludhiana North": "Ludhiana", "Gill": "Ludhiana",
+    "Payal": "Ludhiana", "Dakha": "Ludhiana", "Raikot": "Ludhiana", "Jagraon": "Ludhiana",
+    "Nihal Singh Wala": "Moga", "Bhagha Purana": "Moga", "Moga": "Moga", "Dharamkot": "Moga",
+    "Zira": "Firozpur", "Firozpur City": "Firozpur", "Firozpur Rural": "Firozpur",
+    "Guru Har Sahai": "Firozpur", "Jalalabad": "Fazilka", "Fazilka": "Fazilka",
+    "Abohar": "Fazilka", "Balluana": "Fazilka", "Lambi": "Sri Muktsar Sahib",
+    "Gidderbaha": "Sri Muktsar Sahib", "Malout": "Sri Muktsar Sahib", "Muktsar": "Sri Muktsar Sahib",
+    "Faridkot": "Faridkot", "Kotkapura": "Faridkot", "Jaitu": "Faridkot",
+    "Rampura Phul": "Bathinda", "Bhucho Mandi": "Bathinda", "Bathinda Urban": "Bathinda",
+    "Bathinda Rural": "Bathinda", "Talwandi Sabo": "Bathinda", "Maur": "Bathinda",
+    "Mansa": "Mansa", "Sardulgarh": "Mansa", "Budhlada": "Mansa", "Lehra": "Sangrur",
+    "Dirba": "Sangrur", "Sunam": "Sangrur", "Bhadaur": "Barnala", "Barnala": "Barnala",
+    "Mehal Kalan": "Barnala", "Malerkotla": "Malerkotla", "Amargarh": "Malerkotla",
+    "Dhuri": "Sangrur", "Sangrur": "Sangrur", "Nabha": "Patiala", "Patiala Rural": "Patiala",
+    "Rajpura": "Patiala", "Dera Bassi": "S.A.S. Nagar", "Ghanaur": "Patiala",
+    "Sanour": "Patiala", "Patiala": "Patiala", "Samana": "Patiala", "Shutrana": "Patiala"
+}
+
+VALID_CONSTITUENCIES = list(CONSTITUENCY_MAP.keys())
+
+def fuzzy_match_halka(raw_value, threshold=80):
+    """Fuzzy match a raw Halka string to the nearest valid constituency."""
+    if pd.isna(raw_value) or str(raw_value).strip() == '':
+        return pd.NA, pd.NA
+    raw_str = str(raw_value).strip()
+    match, score, _ = process.extractOne(raw_str, VALID_CONSTITUENCIES, scorer=fuzz.token_sort_ratio)
+    if score >= threshold:
+        return match, CONSTITUENCY_MAP[match]
+    return raw_str, pd.NA  # Keep original if no confident match
+    
 @st.cache_data(ttl=10) # Refreshes every 10 seconds
 def load_data():
     VENDOR_SHEETS = {
@@ -99,6 +154,11 @@ try:
 except Exception as e:
     st.error(f"⚠️ Fatal error compiling master database: {e}")
     st.stop()
+
+# Auto-correct Halka and derive District from master list
+master_df[['Halka', 'District']] = master_df['Halka'].apply(
+    lambda x: pd.Series(fuzzy_match_halka(x))
+)
 
 # -----------------------------------------------------------------------------
 # 3. SIDEBAR FILTERS
