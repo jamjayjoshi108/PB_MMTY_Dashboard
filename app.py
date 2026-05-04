@@ -99,7 +99,7 @@ def load_data():
         "MachConferences": [("1gBabD_as3WvaSq4JUX_Si5dJBGxQNTuxY3_ILDEVbEs", "0")],
         "Zenith": [
             ("1gQwS1Uy4RuBpAL4kO39LqmxxIAHKDv_N3Wz7bULARgg", "0"),        # Cluster 1 — replace gid if needed
-            ("1gQwS1Uy4RuBpAL4kO39LqmxxIAHKDv_N3Wz7bULARgg", "CLUSTER_3_GID"),  # Cluster 3 — replace with actual gid
+            ("1gQwS1Uy4RuBpAL4kO39LqmxxIAHKDv_N3Wz7bULARgg", "727417010"),  # Cluster 3 — replace with actual gid
         ],
     }
 
