@@ -55,16 +55,16 @@ def load_data():
     
     all_dataframes = []
     
-    for vendor_name, sheet_id in VENDOR_SHEETS.items():
-        if sheet_id:
-            csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=0"
+    for vendor_name, sheet_list in VENDOR_SHEETS.items():
+        for sheet_id, gid in sheet_list:
+            csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
             try:
                 df = pd.read_csv(csv_url)
                 df = df.dropna(subset=['Date', 'Yatri Name'], how='all')
-                df['Vendor'] = vendor_name 
+                df['Vendor'] = vendor_name  # Both Zenith tabs will be labeled "Zenith"
                 all_dataframes.append(df)
             except Exception as e:
-                st.warning(f"⚠️ Could not load data for {vendor_name}.")
+                st.warning(f"⚠️ Could not load data for {vendor_name} (gid={gid}).")
     
     if all_dataframes:
         master_df = pd.concat(all_dataframes, ignore_index=True)
